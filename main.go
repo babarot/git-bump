@@ -18,6 +18,31 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
+const (
+	Prefix string = "v"
+)
+
+type Spec int
+
+const (
+	Major Spec = iota
+	Minor
+	Patch
+)
+
+func (c Spec) String() string {
+	switch c {
+	case Major:
+		return "major"
+	case Minor:
+		return "minor"
+	case Patch:
+		return "patch"
+	default:
+		return "unknown"
+	}
+}
+
 type Option struct {
 	Major bool `long:"major" description:"Bump up major version"`
 	Minor bool `long:"minor" description:"Bump up minor version"`
@@ -73,8 +98,8 @@ func (c *CLI) Run(args []string) error {
 	}
 
 	tag := next.String()
-	if strings.HasPrefix(current.Original(), "v") {
-		tag = "v" + next.String()
+	if strings.HasPrefix(current.Original(), Prefix) {
+		tag = Prefix + next.String()
 	}
 
 	return c.PushTag(tag)
@@ -169,34 +194,34 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	return current, nil
 }
 
-func (c *CLI) prompt(label string, items []string) (string, error) {
+func (c *CLI) prompt(label string, items []Spec) (Spec, error) {
 	prompt := promptui.Select{
 		Label:        label,
 		Items:        items,
 		HideSelected: true,
 	}
-	_, result, err := prompt.Run()
-	return result, err
+	i, _, err := prompt.Run()
+	return items[i], err
 }
 
 func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	var next semver.Version
 
-	defaultSpecs := []string{"patch", "minor", "major"}
-	specs := []string{}
+	defaultSpecs := []Spec{Major, Minor, Patch}
+	specs := []Spec{}
 	if c.Option.Major {
-		specs = append(specs, "major")
+		specs = append(specs, Major)
 	}
 	if c.Option.Minor {
-		specs = append(specs, "minor")
+		specs = append(specs, Minor)
 	}
 	if c.Option.Patch {
-		specs = append(specs, "patch")
+		specs = append(specs, Patch)
 	}
 
-	label := fmt.Sprintf("Current version is %q. Next is?", current.Original())
+	label := fmt.Sprintf("Current tag is %q. Next is?", current.Original())
 
-	var spec string
+	var spec Spec
 	switch len(specs) {
 	case 0:
 		spec, _ = c.prompt(label, defaultSpecs)
@@ -207,11 +232,11 @@ func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	}
 
 	switch spec {
-	case "major":
+	case Major:
 		next = current.IncMajor()
-	case "minor":
+	case Minor:
 		next = current.IncMinor()
-	case "patch":
+	case Patch:
 		next = current.IncPatch()
 	default:
 		return next, errors.New("invalid semver")
