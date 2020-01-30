@@ -160,7 +160,7 @@ func (c *CLI) PushTag(tag string) error {
 			When:  commit.Committer.When,
 		},
 		Message: commit.Message,
-		// SignKey:
+		// SignKey: TODO: set gpg sign key
 	}
 
 	_, err = c.Repo.CreateTag(tag, head.Hash(), opts)
@@ -170,8 +170,9 @@ func (c *CLI) PushTag(tag string) error {
 
 	fmt.Fprintf(c.Stdout, "Bump version to %q.\n", tag)
 
-	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
+	// TODO: set if all tags
 	// rs := config.RefSpec("refs/tags/*:refs/tags/*")
+	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 
 	defer fmt.Fprintf(c.Stdout, "Pushed to origin.\n")
 	return c.Repo.Push(&git.PushOptions{
