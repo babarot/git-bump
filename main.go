@@ -19,9 +19,9 @@ import (
 )
 
 type Option struct {
-	Major bool `long:"major" description:"Major"`
-	Minor bool `long:"minor" description:"Minor"`
-	Patch bool `long:"patch" description:"Patch"`
+	Major bool `long:"major" description:"Bump up major version"`
+	Minor bool `long:"minor" description:"Bump up minor version"`
+	Patch bool `long:"patch" description:"Bump up patch version"`
 }
 
 type CLI struct {
@@ -62,18 +62,18 @@ func (c *CLI) Run(args []string) error {
 	}
 	c.Repo = r
 
-	latest, err := c.currentVersion()
+	current, err := c.currentVersion()
 	if err != nil {
 		return err
 	}
 
-	next, err := c.nextVersion(latest)
+	next, err := c.nextVersion(current)
 	if err != nil {
 		return err
 	}
 
 	tag := next.String()
-	if strings.HasPrefix(latest.Original(), "v") {
+	if strings.HasPrefix(current.Original(), "v") {
 		tag = "v" + next.String()
 	}
 
@@ -131,11 +131,11 @@ func (c *CLI) PushTag(tag string) error {
 }
 
 func (c *CLI) currentVersion() (*semver.Version, error) {
-	var latest *semver.Version
+	var current *semver.Version
 
 	tagrefs, err := c.Repo.Tags()
 	if err != nil {
-		return latest, err
+		return current, err
 	}
 
 	var tags []string
@@ -147,7 +147,7 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		return nil
 	})
 	if err != nil {
-		return latest, err
+		return current, err
 	}
 
 	vs := make([]*semver.Version, len(tags))
@@ -160,13 +160,13 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	}
 
 	sort.Sort(semver.Collection(vs))
-	latest = vs[len(vs)-1]
+	current = vs[len(vs)-1]
 
 	for _, v := range vs {
 		fmt.Printf("%s\n", v.Original())
 	}
 
-	return latest, nil
+	return current, nil
 }
 
 func (c *CLI) prompt(label string, items []string) (string, error) {
@@ -179,7 +179,7 @@ func (c *CLI) prompt(label string, items []string) (string, error) {
 	return result, err
 }
 
-func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
+func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	var next semver.Version
 
 	defaultSpecs := []string{"patch", "minor", "major"}
@@ -194,7 +194,7 @@ func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 		specs = append(specs, "patch")
 	}
 
-	label := fmt.Sprintf("Current version is %q. Next is?", latest.Original())
+	label := fmt.Sprintf("Current version is %q. Next is?", current.Original())
 
 	var spec string
 	switch len(specs) {
@@ -208,11 +208,11 @@ func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 
 	switch spec {
 	case "major":
-		next = latest.IncMajor()
+		next = current.IncMajor()
 	case "minor":
-		next = latest.IncMinor()
+		next = current.IncMinor()
 	case "patch":
-		next = latest.IncPatch()
+		next = current.IncPatch()
 	default:
 		return next, errors.New("invalid semver")
 	}
