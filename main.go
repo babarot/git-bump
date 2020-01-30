@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -23,48 +22,41 @@ type Option struct {
 
 type CLI struct {
 	Option Option
+	Repo   *git.Repository
 }
 
-func (c CLI) Run(args []string) error {
-	path := args[0]
+func (c *CLI) Run(args []string) error {
+	r, err := git.PlainOpen(args[0])
+	if err != nil {
+		return err
+	}
+	c.Repo = r
 
-	r, err := git.PlainOpen(path)
+	latest, err := c.currentVersion()
 	if err != nil {
 		return err
 	}
 
-	latest, err := getCurrentVersion(r)
+	next, err := c.nextVersion(latest)
 	if err != nil {
 		return err
 	}
 
-	prompt := promptui.Select{
-		Label: "Select Day",
-		Items: []string{"patch", "minor", "major"},
-	}
-	_, result, err := prompt.Run()
+	tag := "v" + next.String()
+	return c.PushTag(tag)
+}
+
+func main() {
+	os.Exit(run(os.Args[1:]))
+}
+
+func (c *CLI) PushTag(tag string) error {
+	head, err := c.Repo.Head()
 	if err != nil {
 		return err
 	}
 
-	var next semver.Version
-	switch result {
-	case "major":
-		next = latest.IncMajor()
-	case "minor":
-		next = latest.IncMinor()
-	case "patch":
-		next = latest.IncPatch()
-	default:
-		return errors.New("no")
-	}
-
-	head, err := r.Head()
-	if err != nil {
-		return err
-	}
-
-	commit, err := r.CommitObject(head.Hash())
+	commit, err := c.Repo.CommitObject(head.Hash())
 	if err != nil {
 		return err
 	}
@@ -88,16 +80,16 @@ func (c CLI) Run(args []string) error {
 		Message: commit.Message,
 		// SignKey:
 	}
-	v := "v" + next.String()
-	_, err = r.CreateTag(v, head.Hash(), opts)
+
+	_, err = c.Repo.CreateTag(tag, head.Hash(), opts)
 	if err != nil {
 		return err
 	}
 
-	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", v, v))
+	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 	// rs := config.RefSpec("refs/tags/*:refs/tags/*")
 
-	if err := r.Push(&git.PushOptions{
+	return c.Repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
 			Username: user,
 			Password: os.Getenv("GITHUB_TOKEN"),
@@ -105,21 +97,13 @@ func (c CLI) Run(args []string) error {
 		RemoteName: "origin",
 		RefSpecs:   []config.RefSpec{rs},
 		Progress:   os.Stdout,
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
-func main() {
-	os.Exit(run(os.Args[1:]))
-}
-
-func getCurrentVersion(r *git.Repository) (*semver.Version, error) {
+func (c *CLI) currentVersion() (*semver.Version, error) {
 	var latest *semver.Version
 
-	tagrefs, err := r.Tags()
+	tagrefs, err := c.Repo.Tags()
 	if err != nil {
 		return latest, err
 	}
@@ -149,6 +133,30 @@ func getCurrentVersion(r *git.Repository) (*semver.Version, error) {
 	latest = vs[len(vs)-1]
 
 	return latest, nil
+}
+
+func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
+	var next semver.Version
+
+	prompt := promptui.Select{
+		Label: "Select next version",
+		Items: []string{"patch", "minor", "major"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		return next, err
+	}
+
+	switch result {
+	case "major":
+		next = latest.IncMajor()
+	case "minor":
+		next = latest.IncMinor()
+	case "patch":
+		next = latest.IncPatch()
+	}
+
+	return next, nil
 }
 
 func run(args []string) int {
