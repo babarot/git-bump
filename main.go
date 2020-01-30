@@ -207,7 +207,6 @@ func (c *CLI) prompt(label string, items []Spec) (Spec, error) {
 func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	var next semver.Version
 
-	defaultSpecs := []Spec{Major, Minor, Patch}
 	specs := []Spec{}
 	if c.Option.Major {
 		specs = append(specs, Major)
@@ -224,10 +223,13 @@ func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	var spec Spec
 	switch len(specs) {
 	case 0:
-		spec, _ = c.prompt(label, defaultSpecs)
+		// No flags specified
+		spec, _ = c.prompt(label, []Spec{Patch, Minor, Major})
 	case 1:
+		// One flag
 		spec = specs[0]
 	default:
+		// Multiple: e.g. --major --patch
 		spec, _ = c.prompt(label, specs)
 	}
 
