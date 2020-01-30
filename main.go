@@ -228,7 +228,7 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		if err != nil {
 			return current, fmt.Errorf("%w: cannot create new version", err)
 		}
-		tags = append(tags, v.Original())
+		return v, nil
 	}
 
 	vs := make([]*semver.Version, len(tags))
