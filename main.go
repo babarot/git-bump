@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/Songmu/gitconfig"
@@ -17,12 +18,32 @@ import (
 )
 
 type Option struct {
-	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Major bool `long:"major" description:"Major"`
+	Minor bool `long:"minor" description:"Minor"`
+	Patch bool `long:"patch" description:"Patch"`
 }
 
 type CLI struct {
 	Option Option
 	Repo   *git.Repository
+}
+
+func main() {
+	os.Exit(run(os.Args[1:]))
+}
+
+func run(args []string) int {
+	var opt Option
+	args, err := flags.ParseArgs(&opt, args)
+	if err != nil {
+		return 1
+	}
+	cli := CLI{Option: opt}
+	if err := cli.Run(args); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
+		return 1
+	}
+	return 0
 }
 
 func (c *CLI) Run(args []string) error {
@@ -42,12 +63,12 @@ func (c *CLI) Run(args []string) error {
 		return err
 	}
 
-	tag := "v" + next.String()
-	return c.PushTag(tag)
-}
+	tag := next.String()
+	if strings.HasPrefix(latest.Original(), "v") {
+		tag = "v" + next.String()
+	}
 
-func main() {
-	os.Exit(run(os.Args[1:]))
+	return c.PushTag(tag)
 }
 
 func (c *CLI) PushTag(tag string) error {
@@ -138,16 +159,45 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 	var next semver.Version
 
-	prompt := promptui.Select{
-		Label: "Select next version",
-		Items: []string{"patch", "minor", "major"},
+	defaultSpecs := []string{"patch", "minor", "major"}
+	specs := []string{}
+	if c.Option.Major {
+		specs = append(specs, "major")
 	}
-	_, result, err := prompt.Run()
-	if err != nil {
-		return next, err
+	if c.Option.Minor {
+		specs = append(specs, "minor")
+	}
+	if c.Option.Patch {
+		specs = append(specs, "patch")
 	}
 
-	switch result {
+	var spec string
+	switch len(specs) {
+	case 0:
+		prompt := promptui.Select{
+			Label: "Select next version",
+			Items: defaultSpecs,
+		}
+		_, result, err := prompt.Run()
+		if err != nil {
+			return next, err
+		}
+		spec = result
+	case 1:
+		spec = specs[0]
+	default:
+		prompt := promptui.Select{
+			Label: "Select next version",
+			Items: specs,
+		}
+		_, result, err := prompt.Run()
+		if err != nil {
+			return next, err
+		}
+		spec = result
+	}
+
+	switch spec {
 	case "major":
 		next = latest.IncMajor()
 	case "minor":
@@ -157,18 +207,4 @@ func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 	}
 
 	return next, nil
-}
-
-func run(args []string) int {
-	var opt Option
-	args, err := flags.ParseArgs(&opt, args)
-	if err != nil {
-		return 1
-	}
-	cli := CLI{Option: opt}
-	if err := cli.Run(args); err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
-		return 1
-	}
-	return 0
 }
