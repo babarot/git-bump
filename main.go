@@ -91,6 +91,10 @@ func (c *CLI) Run(args []string) error {
 
 	r, err := git.PlainOpen(wd)
 	if err != nil {
+		if errors.Is(err, git.ErrRepositoryNotExists) {
+			// make error message git-like
+			return errors.New("fatal: not a git repository")
+		}
 		return err
 	}
 	c.Repo = r
