@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -47,7 +48,15 @@ func run(args []string) int {
 }
 
 func (c *CLI) Run(args []string) error {
-	r, err := git.PlainOpen(args[0])
+	var wd string
+	switch len(args) {
+	case 0:
+		wd = "."
+	default:
+		wd = args[0]
+	}
+
+	r, err := git.PlainOpen(wd)
 	if err != nil {
 		return err
 	}
@@ -153,7 +162,21 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	sort.Sort(semver.Collection(vs))
 	latest = vs[len(vs)-1]
 
+	for _, v := range vs {
+		fmt.Printf("%s\n", v.Original())
+	}
+
 	return latest, nil
+}
+
+func (c *CLI) prompt(label string, items []string) (string, error) {
+	prompt := promptui.Select{
+		Label:        label,
+		Items:        items,
+		HideSelected: true,
+	}
+	_, result, err := prompt.Run()
+	return result, err
 }
 
 func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
@@ -171,30 +194,16 @@ func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 		specs = append(specs, "patch")
 	}
 
+	label := fmt.Sprintf("Current version is %q. Next is?", latest.Original())
+
 	var spec string
 	switch len(specs) {
 	case 0:
-		prompt := promptui.Select{
-			Label: "Select next version",
-			Items: defaultSpecs,
-		}
-		_, result, err := prompt.Run()
-		if err != nil {
-			return next, err
-		}
-		spec = result
+		spec, _ = c.prompt(label, defaultSpecs)
 	case 1:
 		spec = specs[0]
 	default:
-		prompt := promptui.Select{
-			Label: "Select next version",
-			Items: specs,
-		}
-		_, result, err := prompt.Run()
-		if err != nil {
-			return next, err
-		}
-		spec = result
+		spec, _ = c.prompt(label, specs)
 	}
 
 	switch spec {
@@ -204,6 +213,8 @@ func (c *CLI) nextVersion(latest *semver.Version) (semver.Version, error) {
 		next = latest.IncMinor()
 	case "patch":
 		next = latest.IncPatch()
+	default:
+		return next, errors.New("invalid semver")
 	}
 
 	return next, nil
