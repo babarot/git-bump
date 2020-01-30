@@ -3,10 +3,10 @@ module github.com/b4b4r07/git-bump
 go 1.12
 
 require (
-	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/semver/v3 v3.0.3
 	github.com/Songmu/gitconfig v0.0.3
-	github.com/k0kubun/pp v3.0.1+incompatible
+	github.com/jessevdk/go-flags v1.4.0
+	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 )
