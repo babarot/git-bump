@@ -179,6 +179,25 @@ func (c *CLI) PushTag(tag string) error {
 	})
 }
 
+func (c *CLI) newVersion() (*semver.Version, error) {
+	validate := func(input string) error {
+		_, err := semver.NewVersion(input)
+		return err
+	}
+
+	prompt := promptui.Prompt{
+		Label:    "New version",
+		Validate: validate,
+	}
+
+	v, err := prompt.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	return semver.NewVersion(v)
+}
+
 func (c *CLI) currentVersion() (*semver.Version, error) {
 	var current *semver.Version
 
@@ -197,6 +216,15 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	})
 	if err != nil {
 		return current, err
+	}
+
+	// No tags found
+	if len(tags) == 0 {
+		v, err := c.newVersion()
+		if err != nil {
+			return current, fmt.Errorf("%w: cannot create new version", err)
+		}
+		tags = append(tags, v.Original())
 	}
 
 	vs := make([]*semver.Version, len(tags))
