@@ -43,6 +43,8 @@ type CLI struct {
 	Stdout io.Writer
 	Stderr io.Writer
 	Repo   *git.Repository
+
+	initial *semver.Version
 }
 
 type Option struct {
@@ -228,6 +230,7 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		if err != nil {
 			return current, fmt.Errorf("%w: cannot create new version", err)
 		}
+		c.initial = v
 		return v, nil
 	}
 
@@ -269,6 +272,10 @@ func (c *CLI) prompt(label string, items []Spec) (Spec, error) {
 
 func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	var next semver.Version
+
+	if c.initial != nil {
+		return *c.initial, nil
+	}
 
 	specs := []Spec{}
 	if c.Option.Major {
