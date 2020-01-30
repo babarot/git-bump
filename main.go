@@ -20,6 +20,18 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
+const (
+	Prefix string = "v"
+)
+
+type Spec int
+
+const (
+	Major Spec = iota
+	Minor
+	Patch
+)
+
 type CLI struct {
 	Option Option
 	Stdout io.Writer
@@ -45,16 +57,10 @@ func run(args []string) int {
 	if err != nil {
 		return 1
 	}
-	var stdout, stderr io.Writer
-	if opt.Quiet {
-		stdout, stderr = ioutil.Discard, ioutil.Discard
-	} else {
-		stdout, stderr = os.Stdout, os.Stderr
-	}
 	cli := CLI{
 		Option: opt,
-		Stdout: stdout,
-		Stderr: stderr,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 		Repo:   nil,
 	}
 	if err := cli.Run(args); err != nil {
@@ -65,6 +71,10 @@ func run(args []string) int {
 }
 
 func (c *CLI) Run(args []string) error {
+	if c.Option.Quiet {
+		c.Stdout, c.Stderr = ioutil.Discard, ioutil.Discard
+	}
+
 	var wd string
 	switch len(args) {
 	case 0:
@@ -96,18 +106,6 @@ func (c *CLI) Run(args []string) error {
 
 	return c.PushTag(tag)
 }
-
-const (
-	Prefix string = "v"
-)
-
-type Spec int
-
-const (
-	Major Spec = iota
-	Minor
-	Patch
-)
 
 func (c Spec) String() string {
 	switch c {
