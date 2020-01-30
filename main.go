@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -18,40 +20,19 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
-const (
-	Prefix string = "v"
-)
-
-type Spec int
-
-const (
-	Major Spec = iota
-	Minor
-	Patch
-)
-
-func (c Spec) String() string {
-	switch c {
-	case Major:
-		return "major"
-	case Minor:
-		return "minor"
-	case Patch:
-		return "patch"
-	default:
-		return "unknown"
-	}
+type CLI struct {
+	Option Option
+	Stdout io.Writer
+	Stderr io.Writer
+	Repo   *git.Repository
 }
 
 type Option struct {
 	Major bool `long:"major" description:"Bump up major version"`
 	Minor bool `long:"minor" description:"Bump up minor version"`
 	Patch bool `long:"patch" description:"Bump up patch version"`
-}
 
-type CLI struct {
-	Option Option
-	Repo   *git.Repository
+	Quiet bool `short:"q" long:"quiet" description:"Be quiet"`
 }
 
 func main() {
@@ -64,7 +45,18 @@ func run(args []string) int {
 	if err != nil {
 		return 1
 	}
-	cli := CLI{Option: opt}
+	var stdout, stderr io.Writer
+	if opt.Quiet {
+		stdout, stderr = ioutil.Discard, ioutil.Discard
+	} else {
+		stdout, stderr = os.Stdout, os.Stderr
+	}
+	cli := CLI{
+		Option: opt,
+		Stdout: stdout,
+		Stderr: stderr,
+		Repo:   nil,
+	}
 	if err := cli.Run(args); err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] %v\n", err)
 		return 1
@@ -105,6 +97,31 @@ func (c *CLI) Run(args []string) error {
 	return c.PushTag(tag)
 }
 
+const (
+	Prefix string = "v"
+)
+
+type Spec int
+
+const (
+	Major Spec = iota
+	Minor
+	Patch
+)
+
+func (c Spec) String() string {
+	switch c {
+	case Major:
+		return "major"
+	case Minor:
+		return "minor"
+	case Patch:
+		return "patch"
+	default:
+		return "unknown"
+	}
+}
+
 func (c *CLI) PushTag(tag string) error {
 	head, err := c.Repo.Head()
 	if err != nil {
@@ -141,9 +158,12 @@ func (c *CLI) PushTag(tag string) error {
 		return err
 	}
 
+	fmt.Fprintf(c.Stdout, "Bump version to %q.\n", tag)
+
 	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 	// rs := config.RefSpec("refs/tags/*:refs/tags/*")
 
+	defer fmt.Fprintf(c.Stdout, "Pushed to origin.\n")
 	return c.Repo.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
 			Username: user,
@@ -151,7 +171,7 @@ func (c *CLI) PushTag(tag string) error {
 		},
 		RemoteName: "origin",
 		RefSpecs:   []config.RefSpec{rs},
-		Progress:   os.Stdout,
+		Progress:   c.Stdout,
 	})
 }
 
@@ -187,9 +207,16 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	sort.Sort(semver.Collection(vs))
 	current = vs[len(vs)-1]
 
-	for _, v := range vs {
-		fmt.Printf("%s\n", v.Original())
+	fmt.Fprintln(c.Stdout, "Tags:")
+	for i, v := range vs {
+		msg := fmt.Sprintf("- %s", v.Original())
+		if i == len(vs)-1 {
+			// this is last element
+			msg = fmt.Sprintf("- %s (current version)", v.Original())
+		}
+		fmt.Fprintln(c.Stdout, msg)
 	}
+	fmt.Fprintln(c.Stdout)
 
 	return current, nil
 }
@@ -221,16 +248,23 @@ func (c *CLI) nextVersion(current *semver.Version) (semver.Version, error) {
 	label := fmt.Sprintf("Current tag is %q. Next is?", current.Original())
 
 	var spec Spec
+	var err error
 	switch len(specs) {
 	case 0:
 		// No flags specified
-		spec, _ = c.prompt(label, []Spec{Patch, Minor, Major})
+		spec, err = c.prompt(label, []Spec{Patch, Minor, Major})
+		if err != nil {
+			return next, fmt.Errorf("%w: failed to select valid semver spec", err)
+		}
 	case 1:
 		// One flag
 		spec = specs[0]
 	default:
 		// Multiple: e.g. --major --patch
-		spec, _ = c.prompt(label, specs)
+		spec, err = c.prompt(label, specs)
+		if err != nil {
+			return next, fmt.Errorf("%w: failed to select valid semver spec", err)
+		}
 	}
 
 	switch spec {
