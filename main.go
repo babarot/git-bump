@@ -20,6 +20,12 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
+// These variables are set in build step
+var (
+	Version  = "unset"
+	Revision = "unset"
+)
+
 const (
 	Prefix string = "v"
 )
