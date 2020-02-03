@@ -245,13 +245,14 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	}
 
 	sort.Sort(semver.Collection(vs))
-	current = vs[len(vs)-1]
+
+	last := len(vs) - 1
+	current = vs[last]
 
 	fmt.Fprintln(c.Stdout, "Tags:")
 	for i, v := range vs {
 		msg := fmt.Sprintf("- %s", v.Original())
-		if i == len(vs)-1 {
-			// this is last element
+		if i == last {
 			msg = fmt.Sprintf("- %s (current version)", v.Original())
 		}
 		fmt.Fprintln(c.Stdout, msg)
