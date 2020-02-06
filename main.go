@@ -235,13 +235,13 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		return v, nil
 	}
 
-	vs := make([]*semver.Version, len(tags))
-	for i, tag := range tags {
+	vs := make([]*semver.Version, 0)
+	for _, tag := range tags {
 		v, err := semver.NewVersion(tag)
 		if err != nil {
 			continue
 		}
-		vs[i] = v
+		vs = append(vs, v)
 	}
 
 	sort.Sort(semver.Collection(vs))
