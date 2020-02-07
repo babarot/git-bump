@@ -3,6 +3,8 @@ git-bump
 
 Bump version (git tag) to next one with [semver](https://semver.org/).
 
+![](demo.png)
+
 ## Usage
 
 ```console
