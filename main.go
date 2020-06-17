@@ -18,6 +18,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
 // These variables are set in build step
@@ -175,15 +176,34 @@ func (c *CLI) PushTag(tag string) error {
 	rs := config.RefSpec(fmt.Sprintf("refs/tags/%s:refs/tags/%s", tag, tag))
 
 	defer fmt.Fprintf(c.Stdout, "Pushed to origin.\n")
-	return c.Repo.Push(&git.PushOptions{
-		Auth: &http.BasicAuth{
-			Username: user,
-			Password: os.Getenv("GITHUB_TOKEN"),
-		},
+
+	pushOptions := &git.PushOptions{
 		RemoteName: "origin",
 		RefSpecs:   []config.RefSpec{rs},
 		Progress:   c.Stdout,
-	})
+	}
+
+	if sshKey, ok := os.LookupEnv("SSH_KEY"); ok {
+		var publicKey *ssh.PublicKeys
+		sshKeyContents, err := ioutil.ReadFile(sshKey)
+		if err != nil {
+			fmt.Fprintf(c.Stderr, "Unable to read SSH_KEY: %s\n", err)
+		}
+		publicKey, err = ssh.NewPublicKeys("git", []byte(sshKeyContents), "")
+		if err != nil {
+			fmt.Fprintf(c.Stderr, "Unable to parse SSH_KEY: %s\n", err)
+		}
+		pushOptions.Auth = publicKey
+	}
+
+	if githubToken, ok := os.LookupEnv("GITHUB_TOKEN"); ok {
+		pushOptions.Auth = &http.BasicAuth{
+			Username: user,
+			Password: githubToken,
+		}
+	}
+
+	return c.Repo.Push(pushOptions)
 }
 
 func (c *CLI) newVersion() (*semver.Version, error) {

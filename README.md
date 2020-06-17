@@ -33,6 +33,13 @@ Download the binary from [GitHub Releases][release] and drop it in your `$PATH`.
 - [Darwin / Mac][release]
 - [Linux][release]
 
+## Configuration
+
+This project makes use of the following environment variables.
+
+- `GITHUB_TOKEN` - authenticate against Github repositories using an [access token](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line#creating-a-token)
+- `SSH_KEY` - authenticate to remote origin using this SSH key
+
 ## License
 
 [MIT][license]
