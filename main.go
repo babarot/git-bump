@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -110,10 +111,8 @@ func (c *CLI) Run(args []string) error {
 	}
 
 	tag := next.String()
-	if len(c.Option.Prefix) != 0 {
-		if strings.HasPrefix(current.Original(), c.Option.Prefix) {
-			tag = c.Option.Prefix + next.String()
-		}
+	if strings.HasPrefix(current.Original(), c.Option.Prefix) {
+		tag = c.Option.Prefix + next.String()
 	}
 
 	return c.PushTag(tag)
@@ -213,13 +212,19 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		return current, err
 	}
 
+	r, _ := regexp.Compile("^[0-9].*")
+
 	var tags []string
 	err = tagrefs.ForEach(func(t *plumbing.Reference) error {
 		tag := t.Name()
 		if tag.IsTag() {
+			short := tag.Short()
 			if len(c.Option.Prefix) != 0 {
-				short := tag.Short()
 				if strings.HasPrefix(short, c.Option.Prefix) {
+					tags = append(tags, short)
+				}
+			} else {
+				if r.MatchString(short) {
 					tags = append(tags, short)
 				}
 			}
