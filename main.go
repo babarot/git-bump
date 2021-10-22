@@ -48,7 +48,7 @@ type Option struct {
 	Minor bool `long:"minor" description:"Bump up minor version"`
 	Patch bool `long:"patch" description:"Bump up patch version"`
 
-	Prefix string `short:"p" long:"prefix" description:"Version prefix" optional:"yes" optional-value:""`
+	Prefix string `short:"p" long:"prefix" description:"Version prefix" optional:"yes" default:"v"`
 
 	Quiet bool `short:"q" long:"quiet" description:"Be quiet"`
 }
