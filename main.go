@@ -26,10 +26,6 @@ var (
 	Revision = "unset"
 )
 
-const (
-	Prefix string = "v"
-)
-
 type Spec int
 
 const (
@@ -51,6 +47,8 @@ type Option struct {
 	Major bool `long:"major" description:"Bump up major version"`
 	Minor bool `long:"minor" description:"Bump up minor version"`
 	Patch bool `long:"patch" description:"Bump up patch version"`
+
+	Prefix string `short:"p" long:"prefix" description:"Version prefix" optional:"yes" optional-value:""`
 
 	Quiet bool `short:"q" long:"quiet" description:"Be quiet"`
 }
@@ -112,8 +110,10 @@ func (c *CLI) Run(args []string) error {
 	}
 
 	tag := next.String()
-	if strings.HasPrefix(current.Original(), Prefix) {
-		tag = Prefix + next.String()
+	if len(c.Option.Prefix) != 0 {
+		if strings.HasPrefix(current.Original(), c.Option.Prefix) {
+			tag = c.Option.Prefix + next.String()
+		}
 	}
 
 	return c.PushTag(tag)
@@ -217,7 +217,12 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 	err = tagrefs.ForEach(func(t *plumbing.Reference) error {
 		tag := t.Name()
 		if tag.IsTag() {
-			tags = append(tags, tag.Short())
+			if len(c.Option.Prefix) != 0 {
+				short := tag.Short()
+				if strings.HasPrefix(short, c.Option.Prefix) {
+					tags = append(tags, short)
+				}
+			}
 		}
 		return nil
 	})
