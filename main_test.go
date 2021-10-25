@@ -11,11 +11,17 @@ type testPair struct {
 }
 
 var tests = []testPair{
+	{[]string{"0.0.1"}, "0.0.2"},
 	{[]string{"v0.0.1", "v0.0.2"}, "v0.0.3"},
+	{[]string{"v0.0.1", "0.0.2"}, "0.0.3"},
 }
 
-var testsMeta = []testPair{
+var testsMetaIntel = []testPair{
 	{[]string{"0.0.1+amd", "0.0.1+intel", "0.0.2+amd", "0.0.3+amd"}, "0.0.2+intel"},
+}
+
+var testsMetaAmd = []testPair{
+	{[]string{"0.0.1+amd", "0.0.1+intel", "0.0.2+amd", "0.0.3+amd"}, "0.0.4+amd"},
 }
 
 func TestFindCurrentTag(t *testing.T) {
@@ -23,7 +29,8 @@ func TestFindCurrentTag(t *testing.T) {
 }
 
 func TestFindCurrentTagForMeta(t *testing.T) {
-	createCli("intel").runScenarios(t, testsMeta)
+	createCli("intel").runScenarios(t, testsMetaIntel)
+	createCli("amd").runScenarios(t, testsMetaAmd)
 }
 
 func (c *CLI) runScenarios(t *testing.T, scenarios []testPair) {
