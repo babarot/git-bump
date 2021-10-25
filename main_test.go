@@ -5,31 +5,31 @@ import (
 	"testing"
 )
 
-type testpair struct {
+type testPair struct {
 	tags        []string
 	nextVersion string
 }
 
-var tests = []testpair{
+var tests = []testPair{
 	{[]string{"v0.0.1", "v0.0.2"}, "v0.0.3"},
 }
 
-var testsMeta = []testpair{
+var testsMeta = []testPair{
 	{[]string{"0.0.1+amd", "0.0.1+intel", "0.0.2+amd", "0.0.3+amd"}, "0.0.2+intel"},
 }
 
 func TestFindCurrentTag(t *testing.T) {
-	runScenarios(t, createCli(""), tests)
+	createCli("").runScenarios(t, tests)
 }
 
 func TestFindCurrentTagForMeta(t *testing.T) {
-	runScenarios(t, createCli("intel"), testsMeta)
+	createCli("").runScenarios(t, testsMeta)
 }
 
-func runScenarios(t *testing.T, cli CLI, scenarios []testpair) {
+func (c *CLI) runScenarios(t *testing.T, scenarios []testPair) {
 	for _, pair := range scenarios {
-		currentVersion, _ := findCurrentVersion(&cli, pair.tags)
-		nextVersion, _ := cli.createNextVersion(currentVersion)
+		currentVersion, _ := c.findCurrentVersion(pair.tags)
+		nextVersion, _ := c.createNextVersion(currentVersion)
 		if nextVersion != pair.nextVersion {
 			t.Error(
 				"For", pair.tags,
@@ -40,12 +40,12 @@ func runScenarios(t *testing.T, cli CLI, scenarios []testpair) {
 	}
 }
 
-func createCli(meta string) CLI {
+func createCli(meta string) *CLI {
 	cli := CLI{
 		Stdout: ioutil.Discard,
 		Stderr: ioutil.Discard,
 		Repo:   nil,
 		Option: Option{Major: false, Minor: false, Patch: true, Meta: meta, Quiet: true},
 	}
-	return cli
+	return &cli
 }

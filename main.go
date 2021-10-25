@@ -241,10 +241,10 @@ func (c *CLI) currentVersion() (*semver.Version, error) {
 		return current, err
 	}
 
-	return findCurrentVersion(c, tags)
+	return c.findCurrentVersion(tags)
 }
 
-func findCurrentVersion(c *CLI, tags []string) (*semver.Version, error) {
+func (c *CLI) findCurrentVersion(tags []string) (*semver.Version, error) {
 	var current *semver.Version
 
 	tags = filterTagsWithMeta(tags, c.Option.Meta)
