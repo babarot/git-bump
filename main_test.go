@@ -23,7 +23,7 @@ func TestFindCurrentTag(t *testing.T) {
 }
 
 func TestFindCurrentTagForMeta(t *testing.T) {
-	createCli("").runScenarios(t, testsMeta)
+	createCli("intel").runScenarios(t, testsMeta)
 }
 
 func (c *CLI) runScenarios(t *testing.T, scenarios []testPair) {
