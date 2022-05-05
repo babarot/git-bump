@@ -1,6 +1,11 @@
 git-bump
 ========
 
+this is a fork of [github.com/b4b4r07/git-bump](https://github.com/b4b4r07/git-bump). Forked because it's abandoned and I
+want to install git-bump with my [PR](https://github.com/b4b4r07/git-bump/pull/5) :)
+
+-------
+
 Bump version (git tag) to next one with [semver](https://semver.org/).
 
 ![](demo.png)
@@ -44,5 +49,5 @@ This project makes use of the following environment variables.
 
 [MIT][license]
 
-[release]: https://github.com/b4b4r07/git-bump/releases/latest
+[release]: https://github.com/justmiles/git-bump/releases/latest
 [license]: https://b4b4r07.mit-license.org

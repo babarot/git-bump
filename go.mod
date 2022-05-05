@@ -1,4 +1,4 @@
-module github.com/b4b4r07/git-bump
+module github.com/justmiles/git-bump
 
 go 1.12
 
