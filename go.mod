@@ -8,5 +8,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 )
